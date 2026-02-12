@@ -1,11 +1,4 @@
-#! usr/bin/env nextflow
 nextflow.enable.dsl=2
-
-params.reads = "${projectDir}/data/sample_data.fastq"
-params.outdir = "${projectDir}/results"
-params.reference = "${projectDir}/data/ref/ref.fasta"
-params.reference_fai = "${projectDir}/data/ref/ref.fasta.fai"
-params.reference_dict = "${projectDir}/data/ref/ref.dict"
 
 include { FASTQC }                      from './modules/fastqc/main.nf'
 include { MULTIQC }                     from './modules/multiqc/main.nf'
@@ -22,7 +15,9 @@ workflow {
 
     reads_ch                    = Channel.fromPath(params.reads)
 
-    QUALITY_CONTROL(reads_ch)
+    if (params.run_qc) {
+        QUALITY_CONTROL(reads_ch)
+    }
 
     trimmed_reads_ch            = FASTP_TRIMMING(reads_ch)
     trimmed_reads_mapped_ch     = trimmed_reads_ch.map { trimmed, html, json -> trimmed }  
@@ -31,10 +26,12 @@ workflow {
     reference_fai_ch            = Channel.fromPath(params.reference_fai)
     reference_dict_ch           = Channel.fromPath(params.reference_dict)
 
-    _vcf_ch = VARIANT_CALLING(
-        reads_ch,
-        reference_fasta_ch,
-        reference_fai_ch,
-        reference_dict_ch
-    )
+    if (params.run_vc) {
+        _vcf_ch = VARIANT_CALLING(
+            reads_ch,
+            reference_fasta_ch,
+            reference_fai_ch,
+            reference_dict_ch
+        )
+    }
 }
